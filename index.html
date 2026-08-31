@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#FFD1DC">
+    <title>For You</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
+        html, body { width:100%; height:100vh; height:100dvh; overflow:hidden; font-family:-apple-system,"PingFang SC","Microsoft YaHei","Source Han Serif SC","Noto Serif CJK SC",serif; user-select:none; }
+        #bg { position:fixed; inset:0; background:linear-gradient(135deg,#FFD1DC,#FFE5EC); transition:background 1.5s ease-in-out; z-index:0; will-change:background; }
+        #tip { will-change:opacity; }
+        #hearts { position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+        .heart { position:absolute; color:rgba(255,107,157,0.35); animation:fall linear forwards; }
+        @keyframes fall { 0%{transform:translateY(-10vh) rotate(0);opacity:0} 10%{opacity:1} 90%{opacity:.8} 100%{transform:translateY(110vh) rotate(360deg);opacity:0} }
+        #card { position:relative; z-index:2; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; cursor:pointer; }
+        #title { position:absolute; top:max(20px,env(safe-area-inset-top)); font-size:13px; color:rgba(0,0,0,.3); letter-spacing:3px; font-weight:300; }
+        #deco-heart { font-size:28px; color:rgba(255,107,157,.6); margin-bottom:24px; animation:pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.15);opacity:.9} }
+        #tip { font-size:clamp(1.4rem,6vw,2rem); color:#3A3A3A; text-align:center; line-height:1.8; max-width:85%; font-weight:500; transition:opacity .5s ease; word-break:break-word; }
+        #hint { position:absolute; bottom:max(100px,calc(100px + env(safe-area-inset-bottom))); font-size:12px; color:rgba(0,0,0,.25); letter-spacing:1px; animation:blink 3s ease-in-out infinite; }
+        @keyframes blink { 0%,100%{opacity:.3} 50%{opacity:.6} }
+        #music-btn { position:absolute; bottom:max(30px,env(safe-area-inset-bottom)); padding:14px 36px; border:none; border-radius:50px; background:rgba(255,255,255,.35); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); color:#555; font-size:15px; font-family:inherit; display:flex; align-items:center; gap:8px; cursor:pointer; transition:transform .2s,background .3s; text-decoration:none; }
+        #music-btn:active { transform:scale(.92); background:rgba(255,255,255,.5); }
+        #music-btn .icon { font-size:18px; }
+        .fade-out { opacity:0 !important; }
+    </style>
+</head>
+<body>
+    <div id="bg"></div>
+    <div id="hearts"></div>
+    <div id="card" onclick="nextTip()">
+        <div id="title">FOR YOU</div>
+        <div id="deco-heart">&#9829;</div>
+        <div id="tip">今天也要元气满满呀</div>
+        <div id="hint">点击换一句 &#183; 摇一摇换一句</div>
+        <div id="music-btn" onclick="openMusic(event)">
+            <span class="icon">&#9835;</span>
+            <span id="music-label">打开 QQ音乐</span>
+        </div>
+    </div>
+
+    <script>
+    // ============================================================
+    //   文案生成器（JS 版，移植自 Python，纯前端运行无需服务器）
+    // ============================================================
+    const TIP = {
+        subjects: ['你','宝贝','亲爱的','小可爱','小朋友','笨蛋','傻瓜','猪猪','老公','老婆','我的最爱','心上人','你呀','小傻瓜'],
+        careVerbs: ['多喝','记得喝','多吃','记得吃','多晒','早点','别忘记','要','记得','多去','保持','别忘了','一定','多多'],
+        careNouns: ['水哦','热水呀','水果','饭饭','太阳','蔬菜','牛奶','肉肉','鸡蛋','零食','维生素','甜品','好吃的','蛋糕'],
+        activityVerbs: ['出门','去外面','走走','散步','跑步','运动','逛逛','看看','晒太阳','呼吸新鲜空气'],
+        adjectives: ['开心的','快乐的','元气满满的','幸福的','甜甜的','温暖的','轻松的','舒服的','美好的','幸运的','平安的','健康的','顺利的','可爱的'],
+        lovePhrases: ['我想你了','我爱你','我喜欢你','我一直在','我会陪你','抱抱你','亲亲你','想和你在一起','好想你','超级爱你','中意你','心里都是你'],
+        timeWords: ['今天','明天','每天','今天一整天','这段时间','此刻','现在','未来的日子','以后','一直'],
+        wishes: ['梦想成真','顺顺利利','平平安安','健健康康','烦恼都消失','好运连连','心想事成','万事如意','工作顺利','学业进步','被温柔以待','做个好梦','早点休息','早点睡觉','别熬夜','睡个好觉'],
+        expectations: ['期待下一次见面','好想马上见到你','想快点见到你','等你回来','想见你','盼着你','期待和你见面','期待和你一起吃饭','期待和你聊天'],
+        weather: ['天冷了,多穿衣服','天热了,注意补水','下雨了,记得带伞','刮风了,注意保暖','太阳好大,注意防晒','降温啦,别着凉','今天天气真好','空气很好呀'],
+        careQuestions: ['今天过得开心嘛','吃饭了嘛','睡觉了嘛','有没有想我呀','最近好嘛','在忙嘛','累不累呀','饿不饿呀','冷不冷呀','困不困呀'],
+        moodParticles: ['哦','呀','呢','啦','喔','哟','噢','哈','喵','呜','嘛','']
+    };
+
+    const GRADIENTS = [
+        ['#FFD1DC','#FFE5EC'], ['#C7CEEA','#E8EAF6'], ['#C8E6C9','#E8F5E9'],
+        ['#E1BEE7','#F3E5F5'], ['#FFF9C4','#FFFDE7'], ['#FFCCBC','#FBE9E7'],
+        ['#B2DFDB','#E0F2F1'], ['#F8BBD0','#FCE4EC'], ['#D1C4E9','#EDE7F6'],
+        ['#FFCDD2','#FFEBEE']
+    ];
+
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function weightedRandom(items, weights) {
+        const total = weights.reduce((a, b) => a + b, 0);
+        let r = Math.random() * total;
+        for (let i = 0; i < items.length; i++) { r -= weights[i]; if (r <= 0) return items[i]; }
+        return items[items.length - 1];
+    }
+
+    function withTone(text) {
+        const last = text[text.length - 1];
+        if (Math.random() < 0.5 && last && !'哦呀呢啦喔哟噢哈喵呜嘛吗?？!！,，'.includes(last)) {
+            return text + pick(TIP.moodParticles);
+        }
+        return text;
+    }
+
+    function cleanAdj(adj) { return adj.endsWith('的') ? adj.slice(0, -1) : adj; }
+
+    // 7 个模板
+    const TPL_CARE = () => {
+        const verb = pick(TIP.careVerbs);
+        let text;
+        if (verb === '早点') text = pick(['早点睡觉呀','早点休息呀','早点睡哦','早点休息哦']);
+        else if (verb === '多晒') text = '多晒太阳呀';
+        else if (['多喝','记得喝'].includes(verb)) text = verb + pick(['水哦','热水呀','牛奶呀','热牛奶哦','温水呀']);
+        else if (['多吃','记得吃'].includes(verb)) text = verb + pick(['水果','饭饭','蔬菜','好吃的','肉肉','甜品','蛋糕','鸡蛋']);
+        else if (['别忘记','别忘了','记得','要','一定'].includes(verb)) text = pick([verb+'多喝水哦', verb+'记得吃饭', verb+'早点睡觉', verb+'保持好心情', verb+'多吃水果', verb+'出门记得带伞']);
+        else if (verb === '多去') text = pick(['多去外面走走呀','多去散步哦','多去晒晒太阳呀','多去逛逛呢']);
+        else if (verb === '多多') text = pick(['多多喝水哦','多多吃饭呀','多多休息呢','多多开心呀']);
+        else if (verb === '保持') text = '保持' + cleanAdj(pick(TIP.adjectives)) + '的心情';
+        else text = verb + pick(TIP.careNouns);
+        return withTone(text);
+    };
+
+    const TPL_LOVE = () => {
+        let text;
+        if (Math.random() < 0.4) text = pick(TIP.subjects) + ',' + pick(TIP.lovePhrases);
+        else text = pick(TIP.lovePhrases);
+        return withTone(text);
+    };
+
+    const TPL_WISH = () => {
+        const p = Math.floor(Math.random() * 4) + 1;
+        let text;
+        if (p === 1) text = pick(TIP.timeWords) + '都要' + cleanAdj(pick(TIP.adjectives));
+        else if (p === 2) { const w = pick(TIP.wishes); text = !['别','早','睡'].some(c => w.startsWith(c)) ? '愿' + w : w; }
+        else if (p === 3) text = pick(TIP.wishes);
+        else text = '保持' + cleanAdj(pick(TIP.adjectives)) + '的心情';
+        return withTone(text);
+    };
+
+    const TPL_EXPECT = () => pick(TIP.expectations);
+    const TPL_WEATHER = () => pick(TIP.weather);
+
+    const TPL_QUESTION = () => {
+        if (Math.random() < 0.6) return pick(TIP.careQuestions);
+        return pick(TIP.subjects) + pick(['还好嘛','开心嘛','顺利嘛','累嘛','想我嘛']);
+    };
+
+    const TPL_ACTIVITY = () => {
+        let text = pick(TIP.activityVerbs); if (!text.endsWith('呀')) text += '呀';
+        if (Math.random() < 0.5) { const s = pick(TIP.subjects); text = !text.includes('多') ? s + ',多' + text : s + ',' + text; }
+        return withTone(text);
+    };
+
+    function generateTip() {
+        const templates = [[TPL_CARE,25],[TPL_LOVE,20],[TPL_WISH,15],[TPL_EXPECT,10],[TPL_WEATHER,10],[TPL_QUESTION,12],[TPL_ACTIVITY,8]];
+        const fn = weightedRandom(templates.map(t => t[0]), templates.map(t => t[1]));
+        return fn();
+    }
+
+    // ============================================================
+    //   UI 逻辑
+    // ============================================================
+    const bg = document.getElementById('bg');
+    const tipEl = document.getElementById('tip');
+    const heartsContainer = document.getElementById('hearts');
+    const AUTO_INTERVAL = 4000;
+    let autoTimer = null;
+
+    function nextTip() {
+        tipEl.classList.add('fade-out');
+        setTimeout(() => {
+            tipEl.textContent = generateTip();
+            const g = pick(GRADIENTS);
+            bg.style.background = `linear-gradient(135deg, ${g[0]}, ${g[1]})`;
+            tipEl.classList.remove('fade-out');
+        }, 400);
+        resetAutoTimer();
+    }
+
+    function resetAutoTimer() {
+        if (autoTimer) clearInterval(autoTimer);
+        autoTimer = setInterval(nextTip, AUTO_INTERVAL);
+    }
+
+    // 心形粒子
+    function spawnHeart() {
+        const h = document.createElement('div');
+        h.className = 'heart';
+        h.textContent = '\u2665';
+        h.style.left = Math.random() * 100 + 'vw';
+        h.style.fontSize = (12 + Math.random() * 18) + 'px';
+        h.style.animationDuration = (4 + Math.random() * 4) + 's';
+        h.style.opacity = 0.2 + Math.random() * 0.4;
+        heartsContainer.appendChild(h);
+        h.addEventListener('animationend', () => h.remove());
+    }
+    setInterval(spawnHeart, 1200);
+
+    // 摇一摇
+    let shakeThreshold = 18, lastShake = 0, lastX=0, lastY=0, lastZ=0;
+    function handleMotion(e) {
+        const a = e.accelerationIncludingGravity; if (!a) return;
+        const x=a.x||0, y=a.y||0, z=a.z||0;
+        const delta = Math.abs(x-lastX)+Math.abs(y-lastY)+Math.abs(z-lastZ);
+        lastX=x; lastY=y; lastZ=z;
+        const now = Date.now();
+        if (delta > shakeThreshold && now - lastShake > 1500) { lastShake = now; nextTip(); }
+    }
+    function requestMotionPermission() {
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission().then(s => { if (s === 'granted') window.addEventListener('devicemotion', handleMotion); }).catch(()=>{});
+        } else if (typeof DeviceMotionEvent !== 'undefined') {
+            window.addEventListener('devicemotion', handleMotion);
+        }
+    }
+    document.getElementById('card').addEventListener('click', function once() { requestMotionPermission(); this.removeEventListener('click', once); }, { once: true });
+
+    // ============================================================
+    //   QQ音乐按钮：手机端调起 App，电脑端打开网页版
+    // ============================================================
+    function isMobile() {
+        return /Android|iPhone|iPad|iPod|Mobile|Phone/i.test(navigator.userAgent);
+    }
+
+    function openMusic(e) {
+        e.stopPropagation();  // 阻止冒泡到卡片的 onclick
+        if (isMobile()) {
+            // 手机端：通过 URL Scheme 调起 QQ音乐 App
+            window.location.href = 'qqmusic://';
+        } else {
+            // 电脑端：打开 QQ音乐网页版
+            window.open('https://y.qq.com', '_blank');
+        }
+    }
+
+    // 页面加载时根据设备调整按钮文字
+    if (!isMobile()) {
+        document.getElementById('music-label').textContent = '听 QQ音乐';
+    }
+
+    // 初始化
+    nextTip();
+    </script>
+</body>
+</html>
