@@ -8,7 +8,8 @@
     <meta name="theme-color" content="#FFD1DC">
     <title>For You</title>
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; text-decoration:none; }
+        a { color:inherit; }
         html, body { width:100%; height:100vh; height:100dvh; overflow:hidden; font-family:-apple-system,"PingFang SC","Microsoft YaHei","Source Han Serif SC","Noto Serif CJK SC",serif; user-select:none; }
         #bg { position:fixed; inset:0; background:linear-gradient(135deg,#FFD1DC,#FFE5EC); transition:background 1.5s ease-in-out; z-index:0; will-change:background; }
         #tip { will-change:opacity; }
@@ -36,10 +37,10 @@
         <div id="deco-heart">&#9829;</div>
         <div id="tip">今天也要元气满满呀</div>
         <div id="hint">点击换一句 &#183; 摇一摇换一句</div>
-        <div id="music-btn" onclick="openMusic(event)">
+        <a id="music-btn" href="qqmusic://" onclick="thisevent=event;thisevent.stopPropagation();">
             <span class="icon">&#9835;</span>
             <span id="music-label">打开 QQ音乐</span>
-        </div>
+        </a>
     </div>
 
     <script>
@@ -199,25 +200,17 @@
     document.getElementById('card').addEventListener('click', function once() { requestMotionPermission(); this.removeEventListener('click', once); }, { once: true });
 
     // ============================================================
-    //   QQ音乐按钮：手机端调起 App，电脑端打开网页版
+    //   QQ音乐按钮：手机端原生 <a> 调起 App，电脑端跳网页版
     // ============================================================
     function isMobile() {
         return /Android|iPhone|iPad|iPod|Mobile|Phone/i.test(navigator.userAgent);
     }
 
-    function openMusic(e) {
-        e.stopPropagation();  // 阻止冒泡到卡片的 onclick
-        if (isMobile()) {
-            // 手机端：通过 URL Scheme 调起 QQ音乐 App
-            window.location.href = 'qqmusic://';
-        } else {
-            // 电脑端：打开 QQ音乐网页版
-            window.open('https://y.qq.com', '_blank');
-        }
-    }
-
-    // 页面加载时根据设备调整按钮文字
+    // 电脑端：把 href 改成网页版（手机端保持 qqmusic:// 原生调起）
     if (!isMobile()) {
+        const btn = document.getElementById('music-btn');
+        btn.href = 'https://y.qq.com';
+        btn.target = '_blank';
         document.getElementById('music-label').textContent = '听 QQ音乐';
     }
 
