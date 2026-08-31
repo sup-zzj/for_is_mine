@@ -27,6 +27,12 @@
         #music-btn:active { transform:scale(.92); background:rgba(255,255,255,.5); }
         #music-btn .icon { font-size:18px; }
         .fade-out { opacity:0 !important; }
+        #weixin-tip { position:fixed; inset:0; z-index:999; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; text-align:center; color:#fff; flex-direction:column; }
+        #weixin-tip p { margin:6px 0; }
+        #weixin-tip .arrow { font-size:40px; margin-bottom:20px; animation:bounce 1.5s ease-in-out infinite; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        #weixin-tip .dots { font-size:32px; letter-spacing:4px; }
+        #weixin-tip .sub { font-size:14px; color:rgba(255,255,255,.6); margin-top:20px; }
     </style>
 </head>
 <body>
@@ -37,10 +43,18 @@
         <div id="deco-heart">&#9829;</div>
         <div id="tip">今天也要元气满满呀</div>
         <div id="hint">点击换一句 &#183; 摇一摇换一句</div>
-        <a id="music-btn" href="qqmusic://" onclick="thisevent=event;thisevent.stopPropagation();">
-            <span class="icon">&#9835;</span>
-            <span id="music-label">打开 QQ音乐</span>
+        <a id="music-btn" href="qqmusic://qq.com/media/resumeSong?p=%7B%7D" onclick="thisevent=event;thisevent.stopPropagation();">
+            <span class="icon">&#9654;</span>
+            <span id="music-label">播放音乐</span>
         </a>
+    </div>
+
+    <div id="weixin-tip" onclick="this.style.display='none'">
+        <div class="arrow">&#8679;</div>
+        <p>请点击右上角</p>
+        <p class="dots">&#183;&#183;&#183;</p>
+        <p>选择「在浏览器打开」</p>
+        <p class="sub">即可自动播放音乐</p>
     </div>
 
     <script>
@@ -200,19 +214,31 @@
     document.getElementById('card').addEventListener('click', function once() { requestMotionPermission(); this.removeEventListener('click', once); }, { once: true });
 
     // ============================================================
-    //   QQ音乐按钮：手机端原生 <a> 调起 App，电脑端跳网页版
+    //   QQ音乐按钮：微信引导外部浏览器 + 手机端自动播放 + 电脑端网页版
     // ============================================================
     function isMobile() {
         return /Android|iPhone|iPad|iPod|Mobile|Phone/i.test(navigator.userAgent);
     }
 
-    // 电脑端：把 href 改成网页版（手机端保持 qqmusic:// 原生调起）
-    if (!isMobile()) {
-        const btn = document.getElementById('music-btn');
-        btn.href = 'https://y.qq.com';
-        btn.target = '_blank';
+    function isWeixin() {
+        return /MicroMessenger/i.test(navigator.userAgent);
+    }
+
+    const musicBtn = document.getElementById('music-btn');
+
+    if (isWeixin()) {
+        // 微信内置浏览器：拦截 qqmusic:// 协议，引导用户在外部浏览器打开
+        musicBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('weixin-tip').style.display = 'flex';
+        });
+    } else if (!isMobile()) {
+        // 电脑端：打开网页版
+        musicBtn.href = 'https://y.qq.com';
+        musicBtn.target = '_blank';
         document.getElementById('music-label').textContent = '听 QQ音乐';
     }
+    // 手机端外部浏览器：保持 qqmusic://qq.com/media/resumeSong 自动恢复播放
 
     // 初始化
     nextTip();
